@@ -1,0 +1,4 @@
+chainlit>=1.10.0
+langdetect>=1.0.9
+python-dateutil>=2.8.2
+pydantic>=1.10.7
