@@ -1,18 +1,34 @@
-# src/manager.py
 from typing import Dict, Any
-from .tools import TravelTools
+from .tools import Tools
 from prompts import SYSTEM_PROMPT
 from datetime import datetime
 import json
-import openai
+import os
+from dotenv import load_dotenv
+from groq import Groq
+
+
 
 
 class ChatManager:
 
-    def __init__(self, model_name: str = "meta-llama/llama-4-maverick-17b-128e-instruct"):
-        self.tools = TravelTools()
-        self.session_memory = {}   
-        self.model = model_name    
+    def __init__(self):
+
+        load_dotenv(".env")   
+        GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+        MODEL_NAME = os.getenv("MODEL_NAME")
+        TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+        if not GROQ_API_KEY:
+            raise ValueError("GROQ_API_KEY not set in .env")
+        if not MODEL_NAME:
+            MODEL_NAME = "meta-llama/llama-4-maverick-17b-128e-instruct"
+        if not TAVILY_API_KEY:
+            raise ValueError("TAVILY_API_KEY not set in .env") 
+        
+        self.session_memory = {} 
+        self.tools = Tools(tavily_apikey=TAVILY_API_KEY)
+        self.model = MODEL_NAME
+        self.client = Groq(api_key=GROQ_API_KEY)   
 
     def _build_prompt(self, user_id: str, user_message: str) -> str:
 
@@ -46,7 +62,7 @@ class ChatManager:
 
         prompt = self._build_prompt(user_id, message)
 
-        llm_response = openai.chat.completions.create(
+        llm_response = self.client.chat.completions.create(
             model=self.model,   
             messages=[{"role": "user", "content": prompt}]
         )
@@ -61,7 +77,7 @@ class ChatManager:
 
             tool_result = self.tools.run(tool_name, params) 
 
-            final_response = openai.chat.completions.create(
+            final_response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "user", "content": prompt},

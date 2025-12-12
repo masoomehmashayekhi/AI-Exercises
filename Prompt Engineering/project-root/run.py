@@ -5,7 +5,7 @@ import sys
 if __name__ == '__main__': 
     cmd = [
         sys.executable, '-m', 'chainlit', 'run', 'chainlit_app.py',
-        '--dev'
+        '--debug'
     ]
     print('Running:', ' '.join(cmd))
     subprocess.run(cmd)

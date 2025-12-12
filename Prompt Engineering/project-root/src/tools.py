@@ -2,6 +2,7 @@ import uuid
 import json
 from datetime import datetime
 from .rag_tool import RAGTool
+from .web_search import WebSearchTool
 import os
 
 TICKETS_FILE = "data/tickets.txt"
@@ -126,8 +127,12 @@ class TicketAPISimulator:
 
 
 class Tools:
-    def __init__(self):
+    def __init__(self, tavily_apikey:str):
         self.ticket_api = TicketAPISimulator()
+        self.rag= RAGTool()
+        self.rag.clear_collection()
+        self.rag.ingest_folder("./data")
+        self.web= WebSearchTool(tavily_apikey)
 
     def run(self, tool_name: str, params: dict):
         if tool_name == "api_book_ticket":
@@ -143,5 +148,10 @@ class Tools:
             q = params.get("query") or params.get("q") or ""
             top_k = int(params.get("top_k", 3))
             return {"results": self.rag.query(q, top_k=top_k)}
-
+        
+        if tool_name == "web_search":
+            query = params.get("query") or params.get("q") or ""
+            location = params.get("location")
+            max_results = int(params.get("max_results", 5))
+            return self.web.search(query=query, location=location, max_results=max_results)
         return {"error": "Unknown tool", "status": 400}

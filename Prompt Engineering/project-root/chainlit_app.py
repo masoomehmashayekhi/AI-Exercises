@@ -1,17 +1,31 @@
 import chainlit as cl
-from src.manager import SafarManager
+from src.orchestrator import Orchestrator
 
-manager = SafarManager()
+orch = Orchestrator()
 
 @cl.on_chat_start
 async def start():
-    await cl.Message(content="سلام! من دستیار سفَر هستم — چطور کمکتون کنم؟\n(Hi, I'm your travel assistant. How can I help you?)").send()
+    await cl.Message(
+        content="سلام!  من دستیار سفر شما هستم.\nچطور می‌تونم کمکتون کنم؟"
+    ).send()
+
 
 @cl.on_message
-async def main(message: cl.Message): 
-    responses = await manager.handle_user_message(message.content)
-    for r in responses:
-        if isinstance(r, dict) and r.get('type') == 'card':
-            await cl.Message(content=r.get('text')).send()
-        else:
-            await cl.Message(content=r).send()
+async def main(message: cl.Message):
+
+    user_id = "anon" 
+    user_msg = message.content
+
+    result = orch.run(user_id, user_msg)
+
+    response_text = result.get("response", "متاسفم، پاسخی موجود نیست.")
+    tools_used = result.get("tools_used", [])
+    sources = result.get("sources", [])
+
+    display_text = response_text
+    if tools_used:
+        display_text += f"\n\n Tools used: {tools_used}"
+    if sources:
+        display_text += f"\n Sources: {sources}"
+
+    await cl.Message(content=display_text).send()
