@@ -63,7 +63,6 @@ class Orchestrator:
             + "\nBooking data:\n"
             + json.dumps(slots, ensure_ascii=False)
         )
-
         if "تایید" not in confirm_resp and "confirm" not in confirm_resp.lower():
             return {"response": confirm_resp}
 
@@ -185,66 +184,31 @@ class Orchestrator:
         }
  
 
-    def run(self, user_id: str, user_message: str) -> dict:
+    def run(self, user_id: str, user_message: str) -> dict: 
         lang = self._detect_language_llm(user_id, user_message)
         intent = self._detect_intent_llm(user_id, user_message)
     
-        tools_used = []
-        tool_results = []
-        sources = []
-    
         logger.info(f"User intent={intent} lang={lang}")
     
-        tool_map = {
-            "book_ticket": "api_book_ticket",
-            "cancel_ticket": "api_cancel_ticket",
-            "get_ticket_info": "api_get_ticket_info",
-            "travel_suggestion": "web_search",
-            "rag_question": "rag_query"
-        }
+        if intent == "book_ticket":
+            return self._handle_booking(user_id, user_message)
     
-        selected_tool = tool_map.get(intent, None)
-        tool_rounds = 0  
+        if intent == "cancel_ticket":
+            return self._handle_cancel(user_id, user_message)
     
-        while selected_tool and tool_rounds < self.max_tool_rounds:
-            params = {"message": user_message}
+        if intent == "get_ticket_info":
+            return self._handle_info(user_id, user_message)
+    
+        if intent == "travel_suggestion":
+            return self._handle_travel_suggestion(user_id, user_message)
+    
+        if intent == "rag_question":
+            return self._handle_rag(user_id, user_message)
      
-            if "date" in params and params["date"]:
-                date_info = self._interpret_date_with_llm(user_id, params["date"])
-                if date_info.get("gregorian"):
-                    params["date"] = date_info["gregorian"]
-                if date_info.get("jalali"):
-                    params["_jalali_date"] = date_info["jalali"]
-                if date_info.get("error"):
-                    params["_date_parse_error"] = date_info["error"]
-    
-                logger.info(f"Intent detected: {intent}")
-        
-                if intent == "book_ticket":
-                    return self._handle_booking(user_id, user_message)
-        
-                if intent == "cancel_ticket":
-                    return self._handle_cancel(user_id, user_message)
-        
-                if intent == "get_ticket_info":
-                    return self._handle_info(user_id, user_message)
-        
-                if intent == "travel_suggestion":
-                    return self._handle_travel_suggestion(user_id, user_message)
-                
-                if intent == "rag_question":
-                    return self._handle_rag(user_id, user_message)
-            
-            break   
-    
-        if not selected_tool: 
-            assistant_text = self.chat_manager.chat(user_id, user_message)
+        assistant_text = self.chat_manager.chat(user_id, user_message)
     
         return {
             "response": assistant_text,
-            "tools_used": tools_used,
-            "tool_results": tool_results,
-            "sources": sources,
             "lang": lang,
             "intent": intent
         }

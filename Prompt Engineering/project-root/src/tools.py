@@ -145,19 +145,30 @@ class Tools:
             return self.ticket_api.book_ticket(params)
 
         if tool_name == "api_cancel_ticket":
-            return self.ticket_api.cancel_ticket(params.get("ticket_id"))
+            ticket_id = params.get("ticket_id")
+            if not ticket_id:
+                return {"error": "ticket_id is required"}
+            return self.ticket_api.cancel_ticket(ticket_id)
 
         if tool_name == "api_get_ticket_info":
-            return self.ticket_api.get_ticket_info(params.get("ticket_id"))
-        
+            ticket_id = params.get("ticket_id")
+            if not ticket_id:
+                return {"error": "ticket_id is required"}
+            return self.ticket_api.get_ticket_info(ticket_id)
+
         if tool_name == "rag_query":
-            q = params.get("query") or params.get("q") or ""
+            query = params.get("query") or params.get("q")
+            if not query:
+                return {"error": "query is required"}
             top_k = int(params.get("top_k", 3))
-            return {"results": self.rag.query(q, top_k=top_k)}
-        
+            return {"results": self.rag.query(query, top_k=top_k)}
+
         if tool_name == "web_search":
-            query = params.get("query") or params.get("q") or ""
+            query = params.get("query") or params.get("q")
+            if not query:
+                return {"error": "query is required"}
             location = params.get("location")
             max_results = int(params.get("max_results", 5))
             return self.web.search(query=query, location=location, max_results=max_results)
-        return {"error": "Unknown tool", "status": 400}
+
+        return {"error": f"Unknown tool: {tool_name}", "status": 400}
