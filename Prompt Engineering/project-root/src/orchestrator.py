@@ -8,8 +8,8 @@ import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from prompts import LANGUAGE_DETECTION_PROMPT, INTENT_CLASSIFICATION_PROMPT, DATE_INTERPRETATION_PROMPT, BOOKING_SLOT_FILLING_PROMPT
-from prompts import BOOKING_CONFIRMATION_PROMPT,BOOKING_TOOL_TRIGGER_PROMPT, CANCEL_TOOL_TRIGGER_PROMPT, INFO_TOOL_TRIGGER_PROMPT
-
+from prompts import BOOKING_CONFIRMATION_PROMPT,BOOKING_TOOL_TRIGGER_PROMPT, CANCEL_TOOL_TRIGGER_PROMPT, INFO_TOOL_TRIGGER_PROMPT, PASSENGER_VALIDATION_PROMPT
+from prompts import DATE_INTERPRETATION_PROMPT
 
 from .manager import ChatManager
 from .tools import Tools
@@ -49,14 +49,34 @@ class Orchestrator:
 
         slot_resp = self.chat_manager.chat(
             user_id,
-             BOOKING_SLOT_FILLING_PROMPT + "\nUser message:\n" + message
+             BOOKING_SLOT_FILLING_PROMPT + DATE_INTERPRETATION_PROMPT + "\nUser message:\n" + message
         )
-
-        if not slot_resp.strip().startswith("{"):
-            return {"response": slot_resp}
-
-        slots = json.loads(slot_resp)
-
+        response = slot_resp.strip()
+        try:
+            response = json.loads(slot_resp)  
+        except json.JSONDecodeError: 
+            return {"response": "Error parsing booking response."}
+        
+        if response.get('question'):
+            return {"response": response['question']}
+        
+        slots=response.get('slots')
+        validation_resp = self.chat_manager.chat(
+            user_id,
+            PASSENGER_VALIDATION_PROMPT
+            + "\nBooking data:\n"
+            + json.dumps(slots, ensure_ascii=False)
+        )
+        response = validation_resp.strip()
+        try:
+            response = json.loads(slot_resp)  
+        except json.JSONDecodeError: 
+            return {"response": "Error parsing booking response."}
+        
+        if response.get('question'):
+            return {"response": response['question']}
+        
+        slots=response.get('slots')
         confirm_resp = self.chat_manager.chat(
             user_id,
             BOOKING_CONFIRMATION_PROMPT
@@ -140,10 +160,18 @@ class Orchestrator:
         prompt = INTENT_CLASSIFICATION_PROMPT + "\n\nUser message:\n" + message
         try:
             intent_resp = self.chat_manager.chat(user_id, prompt).strip() 
-            valid_intents = ["book_ticket", "cancel_ticket", "get_ticket_info", "travel_suggestion"]
+            valid_intents = ["book_ticket", "cancel_ticket", "get_ticket_info", "travel_suggestion","rag_question"]
             if intent_resp in valid_intents:
                 return intent_resp
-            return "travel_suggestion"   
+            else:
+                response = intent_resp.strip()
+                try:
+                    response = json.loads(intent_resp)  
+                except Exception:
+                    return "travel_suggestion" 
+        
+                if response.get('intent'):
+                    return response.get('intent') 
         except Exception:
             return "travel_suggestion"
         
@@ -155,7 +183,8 @@ class Orchestrator:
             if lang_resp in ["fa", "en"]:
                 return lang_resp
             return "fa"   
-        except Exception:
+        except Exception as e:
+            print(str(e))
             return "fa"
         
  
@@ -165,8 +194,9 @@ class Orchestrator:
             "rag_query",
             {"query": message}
         )
-    
-        context = "\n".join(d["results"] for d in rag_docs)
+        context = "\n".join(
+                f"{d['metadata'].get('source', '')}: {d['document']}" for d in rag_docs
+            )
     
         prompt = ( 
             "\n\nCompany Knowledge:\n" +

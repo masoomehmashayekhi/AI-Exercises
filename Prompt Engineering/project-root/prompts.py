@@ -131,16 +131,17 @@ Possible intents:
 - general_question
 - unclear
 
+
+Return only the intent string.
+for example
 If the user asks about:
 - company policies
 - refund rules
 - luggage rules
 - ticket changes
 - company-specific procedures
-
 Return intent: rag_question
-
-Return only the intent string.
+think step by step
 """
 
 DATE_INTERPRETATION_PROMPT = """
@@ -150,47 +151,79 @@ The user may use:
 - Gregorian calendar
 - relative dates (فردا، پس‌فردا، شنبه آینده)
   
-Return JSON:
-{
-  "jalali_date": "...",
-  "gregorian_date": "...",
-  "status": "ok"
-}
+Return the gregorian format of the date
 
-If ambiguous:
-{
-  "error": "ambiguous_date",
-  "message": "Please clarify the date."
-}
+If ambiguous:  ask to clarify the date.  
 
-If invalid:
-{
-  "error": "invalid_date",
-  "message": "The date is not valid. Example: '۲۵ اسفند ۱۴۰۲'"
-}
+If invalid: state that the date is not valid
 """
 
 BOOKING_SLOT_FILLING_PROMPT = """
-You are a travel assistant booking slot filler.
-The user wants to book a ticket, but some information may be missing.
-Extract or ask for the following fields:
+You are a travel assistant focused on booking tickets.
+
+Instructions:
+1. Determine the user's intent (e.g., "book_ticket").
+2. Extract the following fields from the user's input:
 
 - origin: city name
 - destination: city name
 - date: travel date
 - passengers: number of passengers
-- passenger_info: list of dicts with name, national_id, phone (optional preferences)
+- passenger_info: list of dictionaries with keys name, national_id, phone, and optional preferences
 
-Return JSON with all fields filled if possible.
-If any field is missing, ask the user for it in natural language.
+3. If any field is missing, generate a natural-language question asking the user for that specific information.
+
+Important rules:
+- Return output **only as JSON**. Do not include any explanation, markdown, code blocks, or extra text.
+- Include a "question" field containing the natural-language question for the user, or null if all information is complete.
+- This JSON is for internal system use only and should not be displayed as-is to the user.
+
+Output structure example:
+
+{
+  "intent": "book_ticket",
+  "slots": {
+    "origin": null,
+    "destination": "Shiraz",
+    "date": null,
+    "passengers": null,
+    "passenger_info": []
+  },
+  "question": "Please provide the origin city for your trip"
+}
+{
+  "intent": "book_ticket",
+  "slots": {
+    "origin": Tehran,
+    "destination": "Shiraz",
+    "date": '2025-12-13',
+    "passengers": 2,
+    "passenger_info": ['Mehran','Saeed']
+  },
+  "question": ""
+}
 """
 
 PASSENGER_VALIDATION_PROMPT = """
+
 Validate passenger information:
 • Name must be alphabetic and natural.
 • National ID must be 10 digits.
 • Phone must follow valid Iranian formats.
 If invalid, request corrected version.
+Output structure example:
+
+{
+  "intent": "book_ticket",
+  "slots": {
+    "origin": null,
+    "destination": "Shiraz",
+    "date": null,
+    "passengers": null,
+    "passenger_info": []
+  },
+  "question": "Please provide the origin city for your trip"
+}
 """
 
 BOOKING_CONFIRMATION_PROMPT = """
@@ -217,6 +250,15 @@ CANCEL_TOOL_TRIGGER_PROMPT = """
 Call cancellation tool when a valid ticket ID is present.
 If missing or malformed, ask for it.
 Output ONLY the function call.
+Output structure example:
+
+{
+  "intent": "cancel_ticket",
+  "slots": {
+    "tickt_id": null 
+  },
+  "question": "Please provide the origin city for your trip"
+}
 """
 
 INFO_TOOL_TRIGGER_PROMPT = """

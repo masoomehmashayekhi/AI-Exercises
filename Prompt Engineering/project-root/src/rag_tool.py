@@ -15,8 +15,11 @@ class STEmbeddingFunction(EmbeddingFunction):
         self.model = SentenceTransformer(model_name)
 
     def __call__(self, input: List[str]) -> List[List[float]]:
-        return self.model.encode(input).tolist()
-
+        embeddings = self.model.encode(
+            input,
+            normalize_embeddings=True
+        )
+        return embeddings.tolist() 
 
 
 class RAGTool:
@@ -141,13 +144,11 @@ class RAGTool:
             return []
 
         query_embedding = self.embedding_fn([query_text])
-
         res = self.collection.query(
             query_embeddings=query_embedding,
             n_results=top_k,
-            include=["documents", "metadatas", "distances", "ids"]
-        )
-
+            include=["documents", "metadatas", "distances"]
+        ) 
         results = []
         docs = res.get("documents", [[]])[0]
         metas = res.get("metadatas", [[]])[0]
