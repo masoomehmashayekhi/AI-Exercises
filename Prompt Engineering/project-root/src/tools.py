@@ -4,6 +4,7 @@ from datetime import datetime
 from .rag_tool import RAGTool
 from .web_search import WebSearchTool
 import os
+from dotenv import load_dotenv
 
 TICKETS_FILE = "data/tickets.txt"
 
@@ -127,12 +128,17 @@ class TicketAPISimulator:
 
 
 class Tools:
-    def __init__(self, tavily_apikey:str):
+    def __init__(self):
         self.ticket_api = TicketAPISimulator()
         self.rag= RAGTool()
         self.rag.clear_collection()
         self.rag.ingest_folder("./data")
-        self.web= WebSearchTool(tavily_apikey)
+        load_dotenv(".env")    
+        self.TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+        if not self.TAVILY_API_KEY:
+            raise ValueError("TAVILY_API_KEY not set in .env") 
+        
+        self.web= WebSearchTool(self.TAVILY_API_KEY)
 
     def run(self, tool_name: str, params: dict):
         if tool_name == "api_book_ticket":

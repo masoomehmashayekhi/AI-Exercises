@@ -90,7 +90,9 @@ Use the RAG tool when:
 • Luggage rules
 • Ticket changes
 • Company-specific procedures
-
+If the user's question is about policies, rules, or procedures:
+You MUST use the RAG tool.
+Do not answer directly.
 Never answer these from memory.
 
 ------------------------------------
@@ -120,14 +122,23 @@ Do not translate. Do not explain.
 """
 
 INTENT_CLASSIFICATION_PROMPT = """
-Determine the user's intent based on natural language understanding.
 Possible intents:
 - book_ticket
 - cancel_ticket
 - get_ticket_info
-- suggest_destinations
+- travel_suggestion
+- rag_question
 - general_question
 - unclear
+
+If the user asks about:
+- company policies
+- refund rules
+- luggage rules
+- ticket changes
+- company-specific procedures
+
+Return intent: rag_question
 
 Return only the intent string.
 """
