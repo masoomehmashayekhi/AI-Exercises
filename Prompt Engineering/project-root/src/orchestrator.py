@@ -195,9 +195,9 @@ class Orchestrator:
             {"query": message}
         )
         context = "\n".join(
-                f"{d['metadata'].get('source', '')}: {d['document']}" for d in rag_docs
+                f"{d.get('source', '')}: {d['document']}" for d in rag_docs
             )
-    
+        import pdb; pdb.set_trace()
         prompt = ( 
             "\n\nCompany Knowledge:\n" +
             context +
